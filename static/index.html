@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tension Board Climb Generator</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #fafafa; color: #222; }
+  main { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  form { display: flex; flex-direction: column; gap: 14px; width: 260px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+  button { padding: 8px 14px; font-size: 15px; cursor: pointer; }
+  canvas { background: #fff; border: 1px solid #ddd; }
+  #frames { font-family: monospace; font-size: 12px; word-break: break-all; color: #555; }
+  #warning { color: #b00; font-size: 14px; }
+  .legend { display: flex; gap: 12px; font-size: 13px; }
+  .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border: 3px solid; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<h1>Tension Board climb generator</h1>
+<main>
+  <form id="form">
+    <label>Angle
+      <select id="angle"></select>
+    </label>
+    <label>Grade <span id="grade-label"></span>
+      <input type="range" id="grade" min="10" max="33" step="1" value="20">
+    </label>
+    <button type="submit" id="go">Generate</button>
+    <div id="warning"></div>
+    <div class="legend">
+      <span style="color:#00DD00">start</span>
+      <span style="color:#0066FF">hand</span>
+      <span style="color:#FF0000">finish</span>
+      <span style="color:#FF00FF">foot</span>
+    </div>
+    <div id="frames"></div>
+  </form>
+  <canvas id="board" width="600" height="480"></canvas>
+</main>
+
+<script>
+const COLORS = { 5: '#00DD00', 6: '#0066FF', 7: '#FF0000', 8: '#FF00FF' };
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const PAD = 24;
+
+let holds = [], grades = {}, toCanvas;
+
+// angle select: 0-70 step 5, default 40
+const angleSel = document.getElementById('angle');
+for (let a = 0; a <= 70; a += 5) {
+  const o = document.createElement('option');
+  o.value = a; o.textContent = a + '°';
+  if (a === 40) o.selected = true;
+  angleSel.appendChild(o);
+}
+
+const gradeIn = document.getElementById('grade');
+const gradeLabel = document.getElementById('grade-label');
+function updateGradeLabel() {
+  const g = gradeIn.value;
+  gradeLabel.textContent = `${g} · ${grades[g] || '?'}`;
+}
+gradeIn.addEventListener('input', updateGradeLabel);
+
+function fitToCanvas() {
+  const xs = holds.map(h => h.x), ys = holds.map(h => h.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const s = Math.min((canvas.width - 2 * PAD) / (maxX - minX),
+                     (canvas.height - 2 * PAD) / (maxY - minY));
+  const offX = (canvas.width - (maxX - minX) * s) / 2;
+  const offY = (canvas.height - (maxY - minY) * s) / 2;
+  // board y goes up, canvas y goes down: flip
+  toCanvas = (x, y) => [offX + (x - minX) * s, canvas.height - (offY + (y - minY) * s)];
+}
+
+function drawBoard() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ccc';
+  for (const h of holds) {
+    const [cx, cy] = toCanvas(h.x, h.y);
+    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 2 * Math.PI); ctx.fill();
+  }
+}
+
+function drawClimb(climb) {
+  drawBoard();
+  ctx.lineWidth = 4;
+  for (const h of climb) {
+    const [cx, cy] = toCanvas(h.x, h.y);
+    ctx.strokeStyle = COLORS[h.role];
+    ctx.beginPath(); ctx.arc(cx, cy, 9, 0, 2 * Math.PI); ctx.stroke();
+  }
+}
+
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('go');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ angle: +angleSel.value, grade: +gradeIn.value }),
+    });
+    const data = await res.json();
+    drawClimb(data.holds);
+    document.getElementById('frames').textContent = data.frames;
+    document.getElementById('warning').textContent = data.warning || '';
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+fetch('/holds').then(r => r.json()).then(d => {
+  holds = d.holds; grades = d.grades;
+  fitToCanvas();
+  drawBoard();
+  updateGradeLabel();
+});
+</script>
+</body>
+</html>
