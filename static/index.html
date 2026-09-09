@@ -44,7 +44,7 @@ const COLORS = { 5: '#00DD00', 6: '#0066FF', 7: '#FF0000', 8: '#FF00FF' };
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 
-let holds = [], grades = {}, board, layers = [], toCanvas;
+let holds = [], grades = {}, board, layers = [], toCanvas, unit;
 
 // angle select: 0-70 step 5, default 40
 const angleSel = document.getElementById('angle');
@@ -68,11 +68,11 @@ function fitToCanvas() {
   // layer images span, so hold x/y map linearly onto image pixels.
   // Board y goes up, canvas y goes down: flip.
   const img = layers[0];
-  canvas.width = img.naturalWidth / 2;
-  canvas.height = img.naturalHeight / 2;
-  const sx = canvas.width / (board.right - board.left);
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  unit = canvas.width / (board.right - board.left);   // canvas px per board unit
   const sy = canvas.height / (board.top - board.bottom);
-  toCanvas = (x, y) => [(x - board.left) * sx, (board.top - y) * sy];
+  toCanvas = (x, y) => [(x - board.left) * unit, (board.top - y) * sy];
 }
 
 function drawBoard() {
@@ -86,7 +86,7 @@ function drawClimb(climb) {
   for (const h of climb) {
     const [cx, cy] = toCanvas(h.x, h.y);
     ctx.strokeStyle = COLORS[h.role];
-    ctx.beginPath(); ctx.arc(cx, cy, 11, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 2.8 * unit, 0, 2 * Math.PI); ctx.stroke();
   }
 }
 
