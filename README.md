@@ -7,6 +7,8 @@ The model (`ClimbGPT`, a ~1M parameter decoder-only transformer) and its constra
 decoder are copied verbatim from that repo's notebook into `model.py`. `board.py` is the
 same file as in the model repo. `best_model.pt` is the trained checkpoint.
 
+Live at https://tensionbot.onrender.com (free tier, so the first load after idle takes up to a minute).
+
 ## Run it
 
 ```
