@@ -1,7 +1,7 @@
 # TBGenerator
 
 A small web UI around the [Tension Board climb generator](https://github.com/damonseto/tensionboardproject):
-pick a board angle and a grade, click Generate, see a Tension Board 2 climb drawn on the board.
+pick a board angle and a grade, click Generate, see a Tension Board 2 climb drawn over a photo of the board.
 
 The model (`ClimbGPT`, a ~1M parameter decoder-only transformer) and its constrained
 decoder are copied verbatim from that repo's notebook into `model.py`. `board.py` is the
@@ -45,8 +45,12 @@ hand hold sits above the finish hold. If all 10 fail it returns the last one wit
 - `model.py` — model classes and `generate()`, moved out of the notebook.
 - `board.py` — tokenizer and constants, unchanged from the model repo.
 - `static/index.html` — the page. Vanilla JS, one canvas, no build step.
-- `holds.json` — hold coordinates and grade names, exported from `tension.db` by
-  `export_holds.py` so the app does not need the 92MB database.
+- `holds.json` — hold coordinates, grade names, and board image calibration,
+  exported from `tension.db` by `export_holds.py` so the app does not need the
+  92MB database.
+- `static/img/` — the official Aurora layer images for the 12 high x 16 wide
+  TB2 Mirror with all four hold sets (Wood, Plastic, and both expansions). The
+  climb is drawn over these so it can be set by looking at the screen.
 
 ## Caveats
 

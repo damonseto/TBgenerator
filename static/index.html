@@ -9,7 +9,7 @@
   form { display: flex; flex-direction: column; gap: 14px; width: 260px; }
   label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
   button { padding: 8px 14px; font-size: 15px; cursor: pointer; }
-  canvas { background: #fff; border: 1px solid #ddd; }
+  canvas { background: #fff; border: 1px solid #ddd; max-width: 100%; height: auto; }
   #frames { font-family: monospace; font-size: 12px; word-break: break-all; color: #555; }
   #warning { color: #b00; font-size: 14px; }
   .legend { display: flex; gap: 12px; font-size: 13px; }
@@ -36,16 +36,15 @@
     </div>
     <div id="frames"></div>
   </form>
-  <canvas id="board" width="600" height="480"></canvas>
+  <canvas id="board" width="731" height="572"></canvas>
 </main>
 
 <script>
 const COLORS = { 5: '#00DD00', 6: '#0066FF', 7: '#FF0000', 8: '#FF00FF' };
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
-const PAD = 24;
 
-let holds = [], grades = {}, toCanvas;
+let holds = [], grades = {}, board, layers = [], toCanvas;
 
 // angle select: 0-70 step 5, default 40
 const angleSel = document.getElementById('angle');
@@ -65,24 +64,20 @@ function updateGradeLabel() {
 gradeIn.addEventListener('input', updateGradeLabel);
 
 function fitToCanvas() {
-  const xs = holds.map(h => h.x), ys = holds.map(h => h.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const s = Math.min((canvas.width - 2 * PAD) / (maxX - minX),
-                     (canvas.height - 2 * PAD) / (maxY - minY));
-  const offX = (canvas.width - (maxX - minX) * s) / 2;
-  const offY = (canvas.height - (maxY - minY) * s) / 2;
-  // board y goes up, canvas y goes down: flip
-  toCanvas = (x, y) => [offX + (x - minX) * s, canvas.height - (offY + (y - minY) * s)];
+  // The board edges (from the Aurora DB) say which board coordinates the
+  // layer images span, so hold x/y map linearly onto image pixels.
+  // Board y goes up, canvas y goes down: flip.
+  const img = layers[0];
+  canvas.width = img.naturalWidth / 2;
+  canvas.height = img.naturalHeight / 2;
+  const sx = canvas.width / (board.right - board.left);
+  const sy = canvas.height / (board.top - board.bottom);
+  toCanvas = (x, y) => [(x - board.left) * sx, (board.top - y) * sy];
 }
 
 function drawBoard() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#ccc';
-  for (const h of holds) {
-    const [cx, cy] = toCanvas(h.x, h.y);
-    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 2 * Math.PI); ctx.fill();
-  }
+  for (const img of layers) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 }
 
 function drawClimb(climb) {
@@ -91,7 +86,7 @@ function drawClimb(climb) {
   for (const h of climb) {
     const [cx, cy] = toCanvas(h.x, h.y);
     ctx.strokeStyle = COLORS[h.role];
-    ctx.beginPath(); ctx.arc(cx, cy, 9, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 11, 0, 2 * Math.PI); ctx.stroke();
   }
 }
 
@@ -114,8 +109,18 @@ document.getElementById('form').addEventListener('submit', async (e) => {
   }
 });
 
-fetch('/holds').then(r => r.json()).then(d => {
-  holds = d.holds; grades = d.grades;
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+fetch('/holds').then(r => r.json()).then(async d => {
+  holds = d.holds; grades = d.grades; board = d.board;
+  layers = await Promise.all(board.layers.map(loadImage));
   fitToCanvas();
   drawBoard();
   updateGradeLabel();
