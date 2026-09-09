@@ -48,9 +48,12 @@ hand hold sits above the finish hold. If all 10 fail it returns the last one wit
 - `holds.json` — hold coordinates, grade names, and board image calibration,
   exported from `tension.db` by `export_holds.py` so the app does not need the
   92MB database.
-- `static/img/` — the official Aurora layer images for the 12 high x 16 wide
-  TB2 Mirror with all four hold sets (Wood, Plastic, and both expansions). The
-  climb is drawn over these so it can be set by looking at the screen.
+- `static/img/board.png` — the 12 high x 16 wide TB2 Mirror board with all four
+  hold sets, built by `make_board_image.py`. Aurora's Wood/Plastic layers
+  (`37.png`, `38.png`) are blurry upscales, so the base holds are cut out of
+  Tension's 4319px 12x12 Mirror layout render instead and composited with
+  Aurora's sharp expansion layers (`41.png`, `42.png`). The climb is drawn over
+  it so it can be set by looking at the screen.
 
 ## Caveats
 

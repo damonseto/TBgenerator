@@ -17,15 +17,13 @@ grades = dict(conn.execute(
 ).fetchall())
 
 # Board image calibration: 12 high x 16 wide (product_size 10) with all four
-# hold sets. The edges map board x/y onto the layer images in static/img,
-# which are the official Aurora renders (api.tensionboardapp2.com/img/...).
+# hold sets. The edges say which board x/y range the image spans;
+# static/img/board.png is built to exactly these edges by make_board_image.py.
 PRODUCT_SIZE = 10
 left, right, bottom, top = conn.execute(
     "SELECT edge_left, edge_right, edge_bottom, edge_top FROM product_sizes WHERE id = ?",
     (PRODUCT_SIZE,)).fetchone()
-layers = [f"img/{fn.split('/')[-1]}" for (fn,) in conn.execute(
-    "SELECT image_filename FROM product_sizes_layouts_sets "
-    "WHERE layout_id = 10 AND product_size_id = ? ORDER BY set_id", (PRODUCT_SIZE,))]
+layers = ['img/board.png']
 
 with open('holds.json', 'w') as f:
     json.dump({
