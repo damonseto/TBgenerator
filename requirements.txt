@@ -4,4 +4,3 @@ uvicorn
 pandas
 numpy
 matplotlib
-scipy
